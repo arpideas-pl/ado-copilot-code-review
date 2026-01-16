@@ -53,9 +53,6 @@ param(
     [ValidateSet("Basic", "Bearer")]
     [string]$AuthType = "Basic",
 
-    [Parameter(Mandatory = $false, HelpMessage = "Azure DevOps Server URL for on-premises installations (e.g., 'https://devops.mycompany.com'). Leave empty for Azure DevOps Services.")]
-    [string]$ServerUrl,
-
     [Parameter(Mandatory = $true, HelpMessage = "Azure DevOps organization name (or collection name for on-prem)")]
     [ValidateNotNullOrEmpty()]
     [string]$Organization,
@@ -190,17 +187,10 @@ $script:OutputBuilder = [System.Text.StringBuilder]::new()
 
 $headers = Get-AuthorizationHeader -Token $Token -AuthType $AuthType
 
-# Build base URL based on whether it's cloud or on-prem
-if ([string]::IsNullOrEmpty($ServerUrl)) {
-    # Azure DevOps Services (cloud)
-    $baseUrl = "https://dev.azure.com/$Organization/$Project/_apis/git/repositories/$Repository/pullrequests/$Id"
-    $webBaseUrl = "https://dev.azure.com/$Organization/$Project"
-} else {
-    # Azure DevOps Server (on-prem)
-    $ServerUrl = $ServerUrl.TrimEnd('/')
-    $baseUrl = "$ServerUrl/$Organization/$Project/_apis/git/repositories/$Repository/pullrequests/$Id"
-    $webBaseUrl = "$ServerUrl/$Organization/$Project"
-}
+# Build base URL (hardcoded for on-prem instance)
+$ServerUrl = 'https://devops.arpideas.pl'
+$baseUrl = "$ServerUrl/$Organization/$Project/_apis/git/repositories/$Repository/pullrequests/$Id"
+$webBaseUrl = "$ServerUrl/$Organization/$Project"
 $apiVersion = "api-version=7.1"
 
 # Verify the PR exists

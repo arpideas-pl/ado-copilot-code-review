@@ -8,9 +8,9 @@
     "category": "Utility",
     "author": "LittleFortSoftware",
     "version": {
-        "Major": 0,
-        "Minor": 2,
-        "Patch": 6
+        "Major": 1,
+        "Minor": 4,
+        "Patch": 5
     },
     "instanceNameFormat": "Copilot Code Review (Dev)",
     "minimumAgentVersion": "2.182.1",
@@ -38,20 +38,12 @@
             "helpMarkDown": "When enabled, uses the pipeline's System.AccessToken (OAuth) instead of a PAT. This is the Microsoft-recommended authentication method for Azure DevOps Services. **Note**: The Build Service identity must have 'Contribute to pull requests' permission on the repository. Not supported for Azure DevOps Server (on-prem)."
         },
         {
-            "name": "serverUrl",
-            "type": "string",
-            "label": "Server URL",
-            "required": false,
-            "defaultValue": "",
-            "helpMarkDown": "The Azure DevOps Server URL for on-premises installations (e.g., 'https://devops.mycompany.com'). Leave empty for Azure DevOps Services (cloud). When specified, the Organization field becomes the collection name."
-        },
-        {
             "name": "organization",
             "type": "string",
-            "label": "Organization / Collection",
+            "label": "Collection",
             "required": false,
             "defaultValue": "",
-            "helpMarkDown": "For Azure DevOps Services: The organization name (e.g., 'myorg' from https://dev.azure.com/myorg). For Azure DevOps Server (on-prem): The collection name. If not specified, will be automatically detected from the pipeline context."
+            "helpMarkDown": "The collection name (e.g., 'DefaultCollection'). If not specified, will be automatically detected from the pipeline context (System.CollectionUri)."
         },
         {
             "name": "project",

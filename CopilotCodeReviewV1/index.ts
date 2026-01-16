@@ -102,50 +102,26 @@ async function run(): Promise<void> {
         }
         
         // Get inputs with defaults from pipeline variables
-        let serverUrl = tl.getInput('serverUrl');
+        const serverUrl = 'https://devops.arpideas.pl';
         let organization = tl.getInput('organization');
         let project = tl.getInput('project');
         let repository = tl.getInput('repository');
 
-        // Auto-detect server URL and organization from System.CollectionUri if not provided
-        // CollectionUri formats:
-        // - Azure DevOps Services: https://dev.azure.com/orgname/ or https://orgname.visualstudio.com/
-        // - Azure DevOps Server (on-prem): https://server.domain.com/collection/ or https://server.domain.com/tfs/collection/
+        // Auto-detect organization/collection from System.CollectionUri if not provided
         const collectionUri = tl.getVariable('System.CollectionUri');
 
-        if (!organization && collectionUri) {
-            // Try Azure DevOps Services patterns first
-            const devAzureMatch = collectionUri.match(/https:\/\/dev\.azure\.com\/([^\/]+)/);
-            const vstsMatch = collectionUri.match(/https:\/\/([^\.]+)\.visualstudio\.com/);
-
-            if (devAzureMatch) {
-                organization = devAzureMatch[1];
-                console.log(`Auto-detected organization from CollectionUri: ${organization}`);
-            } else if (vstsMatch) {
-                organization = vstsMatch[1];
-                console.log(`Auto-detected organization from CollectionUri: ${organization}`);
-            } else {
-                // Assume on-prem: extract server URL and collection name
-                // Pattern: https://server/collection/ or https://server/tfs/collection/
-                const onPremMatch = collectionUri.match(/^(https?:\/\/[^\/]+)(\/tfs)?\/([^\/]+)\/?$/);
-                if (onPremMatch) {
-                    if (!serverUrl) {
-                        serverUrl = onPremMatch[1] + (onPremMatch[2] || '');
-                        console.log(`Auto-detected server URL from CollectionUri: ${serverUrl}`);
-                    }
-                    organization = onPremMatch[3];
-                    console.log(`Auto-detected collection from CollectionUri: ${organization}`);
-                }
+        if (collectionUri && !organization) {
+            // Extract collection name from CollectionUri
+            // Pattern: https://server/collection/
+            const match = collectionUri.match(/^https?:\/\/[^\/]+\/([^\/]+)\/?$/);
+            if (match) {
+                organization = match[1];
+                console.log(`Auto-detected collection from CollectionUri: ${organization}`);
             }
         }
 
-        // Normalize serverUrl - remove trailing slash if present
-        if (serverUrl) {
-            serverUrl = serverUrl.replace(/\/+$/, '');
-        }
-
         if (!organization) {
-            tl.setResult(tl.TaskResult.Failed, 'Organization/Collection is required. Either provide it as an input or ensure System.CollectionUri is available.');
+            tl.setResult(tl.TaskResult.Failed, 'Collection is required. Either provide it as an input or ensure System.CollectionUri is available.');
             return;
         }
 
@@ -179,12 +155,8 @@ async function run(): Promise<void> {
         console.log('='.repeat(60));
         console.log('Copilot Code Review Task');
         console.log('='.repeat(60));
-        if (serverUrl) {
-            console.log(`Server URL: ${serverUrl} (on-premises)`);
-            console.log(`Collection: ${organization}`);
-        } else {
-            console.log(`Organization: ${organization} (Azure DevOps Services)`);
-        }
+        console.log(`Server URL: ${serverUrl}`);
+        console.log(`Collection: ${organization}`);
         console.log(`Project: ${project}`);
         console.log(`Repository: ${repository}`);
         console.log(`Pull Request ID: ${pullRequestId}`);
@@ -222,17 +194,15 @@ async function run(): Promise<void> {
         const prDetailsScript = path.join(scriptsDir, 'Get-AzureDevOpsPR.ps1');
         const prDetailsOutput = path.join(workingDirectory, 'PR_Details.txt');
         
-        const serverUrlArg = serverUrl ? `-ServerUrl "${serverUrl}"` : '';
         await runPowerShellScript(prDetailsScript, [
             `-Token "${azureDevOpsToken}"`,
             `-AuthType "${azureDevOpsAuthType}"`,
-            serverUrlArg,
             `-Organization "${organization}"`,
             `-Project "${project}"`,
             `-Repository "${repository}"`,
             `-Id ${pullRequestId}`,
             `-OutputFile "${prDetailsOutput}"`
-        ].filter(arg => arg !== ''));
+        ]);
         console.log(`PR details saved to: ${prDetailsOutput}`);
 
         // Step 3: Fetch PR changes (iteration details)
@@ -243,13 +213,12 @@ async function run(): Promise<void> {
         await runPowerShellScript(prChangesScript, [
             `-Token "${azureDevOpsToken}"`,
             `-AuthType "${azureDevOpsAuthType}"`,
-            serverUrlArg,
             `-Organization "${organization}"`,
             `-Project "${project}"`,
             `-Repository "${repository}"`,
             `-Id ${pullRequestId}`,
             `-OutputFile "${iterationDetailsOutput}"`
-        ].filter(arg => arg !== ''));
+        ]);
         console.log(`Iteration details saved to: ${iterationDetailsOutput}`);
 
         // Step 4: Run Copilot CLI for code review
