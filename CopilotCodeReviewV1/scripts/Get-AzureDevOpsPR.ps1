@@ -65,7 +65,10 @@ param(
     [ValidateSet("Basic", "Bearer")]
     [string]$AuthType = "Basic",
 
-    [Parameter(Mandatory = $true, HelpMessage = "Azure DevOps organization name")]
+    [Parameter(Mandatory = $false, HelpMessage = "Azure DevOps Server URL for on-premises installations (e.g., 'https://devops.mycompany.com'). Leave empty for Azure DevOps Services.")]
+    [string]$ServerUrl,
+
+    [Parameter(Mandatory = $true, HelpMessage = "Azure DevOps organization name (or collection name for on-prem)")]
     [ValidateNotNullOrEmpty()]
     [string]$Organization,
 
@@ -217,7 +220,18 @@ $script:OutputToFile = -not [string]::IsNullOrEmpty($OutputFile)
 $script:OutputBuilder = [System.Text.StringBuilder]::new()
 
 $headers = Get-AuthorizationHeader -Token $Token -AuthType $AuthType
-$baseUrl = "https://dev.azure.com/$Organization/$Project/_apis"
+
+# Build base URL based on whether it's cloud or on-prem
+if ([string]::IsNullOrEmpty($ServerUrl)) {
+    # Azure DevOps Services (cloud)
+    $baseUrl = "https://dev.azure.com/$Organization/$Project/_apis"
+    $webBaseUrl = "https://dev.azure.com/$Organization/$Project"
+} else {
+    # Azure DevOps Server (on-prem)
+    $ServerUrl = $ServerUrl.TrimEnd('/')
+    $baseUrl = "$ServerUrl/$Organization/$Project/_apis"
+    $webBaseUrl = "$ServerUrl/$Organization/$Project"
+}
 $apiVersion = "api-version=7.1"
 
 # If a specific PR ID is provided, get detailed information
@@ -420,7 +434,7 @@ if ($Id -gt 0) {
     }
     
     Write-Output-Line "`n[Links]" -ForegroundColor Yellow
-    $webUrl = "https://dev.azure.com/$Organization/$Project/_git/$($pr.repository.name)/pullrequest/$($pr.pullRequestId)"
+    $webUrl = "$webBaseUrl/_git/$($pr.repository.name)/pullrequest/$($pr.pullRequestId)"
     Write-Output-Line "  Web URL: $webUrl"
     
     Write-Output-Line ("`n" + ("=" * 80)) -ForegroundColor DarkGray
